@@ -782,6 +782,31 @@ describe('input', function() {
   });
 
 
+  describe('file', function() {
+
+
+    describe('ACCEPT_REGEXP', function() {
+
+      it('should split MIME types', function() {
+        var mimeTypes = 'images/*'.split(ACCEPT_REGEXP);
+        expect(mimeTypes[0]).toBe('images/*');
+      });
+
+      it('should split MIME types', function() {
+        var mimeTypes = 'images/jpg, audio/*'.split(ACCEPT_REGEXP);
+        expect(mimeTypes[0]).toBe('images/jpg');
+        expect(mimeTypes[1]).toBe('audio/*');
+      });
+
+      it('should split MIME types', function() {
+        var mimeTypes = 'images/jpg,audio/*'.split(ACCEPT_REGEXP);
+        expect(mimeTypes[0]).toBe('images/jpg');
+        expect(mimeTypes[1]).toBe('audio/*');
+      });
+    });
+  });
+
+
   describe('radio', function() {
 
     it('should update the model', function() {

@@ -3,6 +3,7 @@
 var URL_REGEXP = /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$/;
 var EMAIL_REGEXP = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$/;
 var NUMBER_REGEXP = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))\s*$/;
+var ACCEPT_REGEXP = /,\s+|,/;
 
 var inputType = {
 
@@ -286,6 +287,61 @@ var inputType = {
       </doc:example>
    */
   'email': emailInputType,
+
+
+  /**
+   * @ngdoc inputType
+   * @name ng.directive:input.file
+   *
+   * @description
+   * input file upload
+   *
+   * @param {string} ngModel Assignable angular expression to data-bind to.
+   * @param {string=} name Property name of the form under which the control is published.
+   * @param {string=} required Sets `required` validation error key if the value is not entered.
+   * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
+   *    the element when the ngRequired expression evaluates to true. Use `ngRequired` instead of
+   *    `required` when you want to data-bind to the `required` attribute.
+   * @param {string=} accept Set of comma-separated strings, each of which is valid MIME-type.
+   * @param {string=} multiple Specifies that an element allows multiple values.
+   *
+   * @example
+      <doc:example>
+        <doc:source>
+          <form name="myForm">
+            Image: <input type="file" name="input" accept="image/*" required ng-model="image">
+            <span class="error" ng-show="myForm.input.$error.required">
+               Required!</span>
+            <span class="error" ng-show="myForm.input.$error.file">
+               Not a valid image!</span>
+            <tt>name = {{image.name}}</tt><br/>
+            <tt>myForm.input.$valid = {{myForm.input.$valid}}</tt><br/>
+            <tt>myForm.input.$error = {{myForm.input.$error}}</tt><br/>
+            <tt>myForm.$valid = {{myForm.$valid}}</tt><br/>
+            <tt>myForm.$error.required = {{!!myForm.$error.required}}</tt><br/>
+            <tt>myForm.$error.file = {{!!myForm.$error.file}}</tt><br/>
+          </form>
+        </doc:source>
+      </doc:example>
+      <doc:example>
+        <doc:source>
+          <form name="myForm">
+            Images: <input type="file" name="input" accept="image/*" multiple required ng-model="images">
+            <span class="error" ng-show="myForm.input.$error.required">
+               Required!</span>
+            <span class="error" ng-show="myForm.input.$error.file">
+                One of the files is not a valid image!</span><br />
+            <tt ng-repeat="img in images">name = {{img.name}}</tt><br/>
+            <tt>myForm.input.$valid = {{myForm.input.$valid}}</tt><br/>
+            <tt>myForm.input.$error = {{myForm.input.$error}}</tt><br/>
+            <tt>myForm.$valid = {{myForm.$valid}}</tt><br/>
+            <tt>myForm.$error.required = {{!!myForm.$error.required}}</tt><br/>
+            <tt>myForm.$error.file = {{!!myForm.$error.file}}</tt><br/>
+          </form>
+        </doc:source>
+      </doc:example>
+   */
+  'file': fileInputType,
 
 
   /**
@@ -612,6 +668,81 @@ function emailInputType(scope, element, attr, ctrl, $sniffer, $browser) {
 
   ctrl.$formatters.push(emailValidator);
   ctrl.$parsers.push(emailValidator);
+}
+
+function fileInputType(scope, element, attr, ctrl, $sniffer, $browser) {
+  var listener = function(e) {
+    var files = e.target.files;
+
+    scope.$apply(function() {
+      if(attr.multiple) {
+        ctrl.$setViewValue(files);
+      } else if (files.length) {
+        ctrl.$setViewValue(files[0]);
+      } else {
+        ctrl.$setViewValue(null);
+      }
+    });
+  }
+
+  var matchMimeType = function(file) {
+    var mimeTypes = attr.accept.split(ACCEPT_REGEXP);
+    for(var i = 0; i < mimeTypes.length; i++) {
+      if((new RegExp(mimeTypes[i])).test(file.type)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  var acceptValidator = function(file) {
+    if(!file) {
+      ctrl.$setValidity('file', true);
+      return file;
+    }
+
+    if(matchMimeType(file)) {
+      ctrl.$setValidity('file', true);
+      return file;
+    }
+    ctrl.$setValidity('file', false);
+    return undefined;
+  };
+
+  var acceptMultipleValidator = function(fileList) {
+    var invalidMatched = false;
+    if(!fileList) {
+      ctrl.$setValidity('file', true);
+      return fileList;
+    }
+
+    for(var i = 0; i < fileList.length; i++) {
+      if(!matchMimeType(fileList[i])) {
+        invalidMatched = true;
+        break;
+      }
+    }
+
+    if(invalidMatched) {
+      ctrl.$setValidity('file', false);
+      return undefined;
+    } else {
+      ctrl.$setValidity('file', true);
+      return fileList;
+    }
+  };
+
+  if(attr.accept) {
+    if(attr.multiple) {
+      ctrl.$formatters.push(acceptMultipleValidator);
+      ctrl.$parsers.push(acceptMultipleValidator);
+    } else {
+      ctrl.$formatters.push(acceptValidator);
+      ctrl.$parsers.push(acceptValidator);
+    }
+  }
+
+  element.bind('change', listener);
 }
 
 function radioInputType(scope, element, attr, ctrl) {
